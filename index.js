@@ -7,12 +7,14 @@ app.use(express.json());
 
 async function getCepData(cep) {
   try {
-    const response = await axios.post(`https://viacep.com.br/ws/${cep}/json/`);
+    const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+    console.log(response.data);
     return response.data;
   } catch (error) {
     throw new Error('Erro ao buscar o CEP: ' + error.message);
   }
 }
+
 
 app.get('/', (request, response) => {
   return response.json({ message: 'tsdasdi' });
