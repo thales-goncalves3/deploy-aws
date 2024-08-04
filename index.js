@@ -1,44 +1,57 @@
 const express = require('express');
+const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
 const axios = require('axios');
 
+
 const app = express();
+const PORT = 3000;
 
+app.use(bodyParser.json());
 
-app.use(express.urlencoded({ extended: true })); // Para analisar dados URL-encoded
-app.use(express.json()); 
+const SECRET_KEY = 'my_super_secret_key_for_testing';
 
-async function getCepData(cep) {
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  
+  if (username === 'usuario' && password === 'hahaha') {
+    const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
+    res.json({ token });
+  } else {
+    res.status(401).json({ message: 'Credenciais inválidas' });
+  }
+});
+
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.header('Authorization');
+
+  if (authHeader) {
+    const token = authHeader.split(' ')[1]; // Extrair o token do formato 'Bearer TOKEN'
+
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+      if (err) {
+        return res.status(403).json({ message: 'Acesso negado' });
+      }
+      req.user = user;
+      next();
+    });
+  } else {
+    res.status(401).json({ message: 'Token não fornecido' });
+  }
+};
+
+app.get('/consultar/:cep', authenticateJWT, async (req, res) => {
+  const { cep } = req.params;
+
   try {
     const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
-   
-    return response.data;
+    res.json(response.data);
   } catch (error) {
-    throw new Error('Erro ao buscar o CEP: ' + error.message);
+    res.status(500).json({ message: 'Erro ao consultar o CEP', error: error.message });
   }
-}
-
-
-app.get('/', (request, response) => {
-  return response.json({ message: 'tsdasdi' });
 });
 
-app.post('/cepdosguri/:cep', async (request, response) => {
-    
-  
-    const cep = request.params.cep;
-  
-    if (!cep) {
-      return response.status(400).json({ error: 'CEP não fornecido' });
-    }
-  
-    try {
-      const data = await getCepData(cep);
-      return response.json(data);
-    } catch (error) {
-      return response.status(500).json({ error: error.message });
-    }
-});
-
-app.listen(3333, () => {
-  console.log('Servidor rodando na porta 3333');
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
